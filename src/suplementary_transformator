@@ -1,0 +1,29 @@
+from transformator import Transformator
+from fragment_factory import FragmentFactory
+from move import Move
+from pm4py.objects.process_tree.obj import ProcessTree
+from util import get_leaf, get_labels_between_activities, get_position_in_children
+
+class SupplementaryTransformator(Transformator):
+        def substitute_fragment(self, tree : ProcessTree, activity_label : str, fragment : ProcessTree, changed_acs : bool = False):
+            leaf = get_leaf(tree, activity_label)
+            parent = leaf._get_parent()
+            children_list = parent.children
+            fragment_tree = FragmentFactory.createFragment(fragment)
+            #can be implemented using remove_fragment and add_fragment core transformations
+            fragment_tree._set_parent(parent) 
+            position = get_position_in_children(children_list, leaf)
+            children_list[position] = fragment_tree
+            parent._set_children(children_list)
+
+        def swipe_two_ac(self, tree : ProcessTree, activity_one : str, activity_two : str):
+            leaves = tree._get_leaves()
+            first = True
+            second = True
+            for leaf in leaves:
+                if (leaf._get_label() == activity_one or (leaf._get_label() is None and activity_one == '*tau*')) and first:
+                    leaf._set_label(activity_two)
+                    first = False
+                elif (leaf._get_label() == activity_two or (leaf._get_label() is None and activity_two == '*tau*')) and second:
+                    leaf._set_label(activity_one)
+                    second = False

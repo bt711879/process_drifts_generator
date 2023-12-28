@@ -1,0 +1,19 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "Python: Debug",
+        "type": "python",
+        "request": "launch",
+        "program": "${workspaceFolder}/src/main.py",
+        "stopOnEntry": false,
+        "python": "${command:python.interpreterPath}",
+        "cwd": "${workspaceFolder}",
+        "env": {},
+        "envFile": "${workspaceFolder}/.env",
+        "debugOptions": [],
+        "args": []
+      }
+    ]
+  }
+  
