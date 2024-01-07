@@ -20,7 +20,7 @@ class CoreTransformator(Transformator):
         leaf = get_leaf(tree, activity_label)
         parent = leaf._get_parent()
         children_list = parent.children
-        fragment_tree = FragmentFactory.createFragment(fragment)
+        fragment_tree = FragmentFactory.create_fragment(fragment)
         children_list.append(fragment_tree)
         fragment_tree._set_parent(parent)
         parent._set_children(children_list)
