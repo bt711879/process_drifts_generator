@@ -1,13 +1,20 @@
+import sys
+
+# Adding 'C:\\GitRepositories\\process_drifts_generator\\src' to the system path
+sys.path.insert(0, 'C:\\GitRepositories\\process_drifts_generator\\src')
 from pm4py.objects.process_tree.obj import ProcessTree
 from pm4py.objects.bpmn.obj import BPMN
 from pm4py.objects.process_tree.obj import Operator
 from pm4py.objects.conversion.bpmn import converter as bpmn_converter
 from pm4py.objects.conversion.wf_net import converter as wf_net_converter
 from pm4py.objects.petri_net.importer import importer as pnml_importer
-from fragment_factory import FragmentFactory
+from src.fragment_factory import FragmentFactory
 import networkx as nx
+import pylab
 import pm4py
-
+from pm4py.util import constants
+from graphviz import Digraph
+from pm4py.visualization.bpmn import visualizer as bpmn_visualizer
 
 ########## process trees ###############################
 
@@ -201,9 +208,9 @@ def get_bpmn_graph_elements(bpmn: BPMN):
 
 
 def delete_nodes_and_correct_flows(bpmn: BPMN, nodes: list[BPMN.BPMNNode], start_node_id_predecessor,
-                                   end_node_id_successor):
+                                   end_node_id_successor, removed_flow : list):
     u_flow = start_node_id_predecessor
-    removed_flow = []
+    #removed_flow = []
     nodes_to_remove = []
     # remove flows
     for node in nodes:
@@ -221,6 +228,7 @@ def delete_nodes_and_correct_flows(bpmn: BPMN, nodes: list[BPMN.BPMNNode], start
     flow = get_flow(bpmn, u_flow, v_flow)
     if (flow not in removed_flow) and (flow in bpmn.get_flows()):
         bpmn.remove_flow(flow)
+        removed_flow.append(flow)
     # remove nodes
     for node in nodes_to_remove:
         print("remove node: ", node)
@@ -233,3 +241,118 @@ def get_flow(bpmn: BPMN, source, target):
     for flow in flows_list:
         if (flow.get_source() == source) & (flow.get_target() == target):
             return flow
+        
+
+def create_new_gateway_with_name(original_gateway, new_name):
+    if isinstance(original_gateway, BPMN.ExclusiveGateway):
+        new_gateway = BPMN.ExclusiveGateway(id=original_gateway.id, name=new_name, in_arcs=original_gateway.in_arcs, out_arcs=original_gateway.out_arcs, process=original_gateway.process)
+    elif isinstance(original_gateway, BPMN.InclusiveGateway):
+        new_gateway = BPMN.InclusiveGateway(id=original_gateway.id, name=new_name, in_arcs=original_gateway.in_arcs, out_arcs=original_gateway.out_arcs, process=original_gateway.process)
+    elif isinstance(original_gateway, BPMN.ParallelGateway):
+        new_gateway = BPMN.ParallelGateway(id=original_gateway.id, name=new_name, in_arcs=original_gateway.in_arcs, out_arcs=original_gateway.out_arcs, process=original_gateway.process)
+    else:
+        # Handle other gateway types or raise an exception if needed
+        raise NotImplementedError("Unsupported gateway type")
+
+    return new_gateway
+
+
+def get_gateway_label_after_actvitiy(bpmn: BPMN, actvitiy_label: str):
+    bpmn_graph = bpmn.get_graph()
+    activity_node = get_node_from_activity_label(bpmn, actvitiy_label)
+    print("look for the gateway after activity", activity_node)
+    gateway = next(bpmn_graph.successors(activity_node.get_id()))
+    if (isinstance(gateway, BPMN.Gateway)):
+        gateway_label = gateway.get_name()
+        if(gateway_label):
+            print("found a gateway", gateway_label)
+            return gateway_label
+        else:
+            gateway_id = gateway.get_id()
+            gateway_predecessors = list(bpmn_graph.predecessors(gateway_id))
+            print("got the predecessors", gateway_predecessors)
+            gateway_successors = list(bpmn_graph.successors(gateway_id))
+            print("got the successors", gateway_successors)
+            new_name = 'label_' + gateway_id
+            new_gateway = create_new_gateway_with_name(gateway, new_name)
+            for predecessor in gateway_predecessors:
+                flow = get_flow(bpmn, source=predecessor, target=gateway)
+                new_flow = BPMN.Flow(flow.get_source(), target=gateway, id=flow.get_id(),name=flow.get_name(), process=flow.get_process())
+                bpmn.add_flow(new_flow)
+                bpmn.remove_flow(flow)
+            for successor in gateway_successors:
+                flow = get_flow(bpmn, source=gateway, target=successor)
+                new_flow = BPMN.Flow(source=gateway, target=flow.get_target(), id=flow.get_id(),name=flow.get_name(), process=flow.get_process())
+                bpmn.add_flow(new_flow)
+                bpmn.remove_flow(flow)
+            bpmn.remove_node(gateway)
+            return new_gateway.get_name()
+    else:
+        raise TypeError(f"Not a gateway after activity label")
+    
+
+def view_bpmn_with_ids(bpmn_graph: BPMN, format: str = 'png',
+                       bgcolor: str = "white", rankdir: str = constants.DEFAULT_RANKDIR_GVIZ):
+    """
+    Views a BPMN graph with node IDs displayed
+
+    :param bpmn_graph: BPMN graph
+    :param format: Format of the visualization (default: 'png')
+    :param bgcolor: Background color of the visualization (default: white)
+    :param rankdir: Sets the direction of the graph ("LR" for left-to-right; "TB" for top-to-bottom)
+
+    Example usage:
+    ```
+    import pm4py
+    bpmn_graph = pm4py.discover_bpmn_inductive(dataframe, activity_key='concept:name', case_id_key='case:concept:name', timestamp_key='time:timestamp')
+    view_bpmn_with_ids(bpmn_graph)
+    ```
+    """
+    format = str(format).lower()
+
+    # Create a Graphviz Digraph
+    dot = Digraph(comment='BPMN Visualization', format=format)
+    dot.attr(bgcolor=bgcolor, rankdir=rankdir)
+
+    for node in bpmn_graph.get_nodes():
+        # Customize node labels to include the 'id'
+        label = f"ID: {node.get_id()}\nNAME: {node.get_name()}"
+        dot.node(node.get_id(), label=label)
+
+    for edge in bpmn_graph.get_flows():
+        dot.edge(edge.get_source().get_id(), edge.get_target().get_id())
+
+    # Display the modified graph
+    dot.view()
+
+
+def get_conv_gateway(bpmn_process: BPMN, div_gateway: BPMN.Gateway):
+    bpmn_process_graph = bpmn_process.get_graph()
+    current_node = div_gateway
+    print("the div_gateway_type:", type(div_gateway), "direction:", div_gateway.get_gateway_direction())
+
+    while True:
+        successors = list(bpmn_process_graph.successors(current_node))
+        if not successors:  # Check if there are no more successors
+            break
+
+        successor = successors[0]  # Assuming you want to consider only the first successor
+        print("check successor", successor.get_id(), ", type", type(successor))
+        if isinstance(successor, type(div_gateway)):
+            return successor
+        else:
+            current_node = successor
+
+def check_all_tasks(task_list):
+    for task in task_list:
+        if not isinstance(task, BPMN.Task):
+            return False
+    return True
+
+
+def count_gateways(nodes_list):
+    count = 0
+    for node in nodes_list:
+        if isinstance(node, BPMN.Gateway):
+            count += 1
+    return count

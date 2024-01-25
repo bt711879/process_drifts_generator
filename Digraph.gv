@@ -1,0 +1,18 @@
+// BPMN Visualization
+digraph {
+	bgcolor=white rankdir=LR
+	"_e70a6fcb-913c-4a7b-a65d-e83adc73d69c" [label="ID: _e70a6fcb-913c-4a7b-a65d-e83adc73d69c
+NAME: Task 3"]
+	"_93c466ab-b271-4376-a427-f4c353d55ce8" [label="ID: _93c466ab-b271-4376-a427-f4c353d55ce8
+NAME: Start Event"]
+	"_820c21c0-45f3-473b-813f-06381cc637cd" [label="ID: _820c21c0-45f3-473b-813f-06381cc637cd
+NAME: Task 2"]
+	"_ec59e164-68b4-4f94-98de-ffb1c58a84af" [label="ID: _ec59e164-68b4-4f94-98de-ffb1c58a84af
+NAME: Task 1"]
+	"_a47df184-085b-49f7-bb82-031c84625821" [label="ID: _a47df184-085b-49f7-bb82-031c84625821
+NAME: End Event"]
+	"_820c21c0-45f3-473b-813f-06381cc637cd" -> "_e70a6fcb-913c-4a7b-a65d-e83adc73d69c"
+	"_ec59e164-68b4-4f94-98de-ffb1c58a84af" -> "_820c21c0-45f3-473b-813f-06381cc637cd"
+	"_e70a6fcb-913c-4a7b-a65d-e83adc73d69c" -> "_a47df184-085b-49f7-bb82-031c84625821"
+	"_93c466ab-b271-4376-a427-f4c353d55ce8" -> "_ec59e164-68b4-4f94-98de-ffb1c58a84af"
+}
