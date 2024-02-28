@@ -25,13 +25,13 @@ class EmbedFragment(BpmnTransformation):
 
     def check(self):
         fragment_nodes_list = list(
-            get_node_from_id(self.bpmn_process, element) for path in nx.all_simple_paths(self.bpmn_process.get_graph(), source=self.fragment_start, target=self.fragment_end) for element in
+            get_node_from_id(bpmn=self.bpmn_process, id=element) for path in nx.all_simple_paths(self.bpmn_process.get_graph(), source=self.fragment_start, target=self.fragment_end) for element in
             path)
         if count_gateways(fragment_nodes_list) % 2 == 1:
             raise ValueError(f"There is a even number of gateway in the fragment")
         else:
             print("Gateway check passed.")
-        if(isinstance(get_node_from_id(self.fragment_end), BPMN.EndEvent)):
+        if(isinstance(get_node_from_id(bpmn=self.bpmn_process, id=self.fragment_end), BPMN.EndEvent)):
             raise ValueError(f"The node with ID {self.fragment_start} is a BPMN.EndEvent, which is not allowed.")
         else:
             print("Node check passed.")
@@ -40,8 +40,8 @@ class EmbedFragment(BpmnTransformation):
         bpmn_graph = self.bpmn_process.get_graph()
         bpmn_start_events = get_start_events(self.bpmn_process)
         bpmn_end_events = get_end_events(self.bpmn_process)
-        fragment_start_node = get_node_from_id(self.bpmn_process, self.fragment_start)
-        fragment_end_node = get_node_from_id(self.bpmn_process, self.fragment_end)
+        fragment_start_node = get_node_from_id(bpmn=self.bpmn_process, id=self.fragment_start)
+        fragment_end_node = get_node_from_id(bpmn=self.bpmn_process, id=self.fragment_end)
         fragment_start_predecessors = list(bpmn_graph.predecessors(fragment_start_node))
         fragment_end_successors = list(bpmn_graph.successors(fragment_end_node))
         # create conditional JOIN gateway

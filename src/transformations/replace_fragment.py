@@ -35,7 +35,7 @@ class ReplaceFragment(BpmnTransformation):
         remove_fragment_transformator.check()
         remove_fragment_transformator.apply()
         # add new fragment sequential
-        add_fragment_transformator = AddFragment(self.bpmn_process, activity_label, self.replace_fragment, Move.SerialMove, False, activity_key=self.activity_key)
+        add_fragment_transformator = AddFragment(bpmn_process=self.bpmn_process, activity_after=activity_label, fragment=self.replace_fragment, move=Move.SerialMove, activity_key=self.activity_key)
         add_fragment_transformator.check()
         add_fragment_transformator.apply()
 

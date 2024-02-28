@@ -1,4 +1,5 @@
 import sys
+from typing import List
 
 # Adding 'C:\\GitRepositories\\process_drifts_generator\\src' to the system path
 sys.path.insert(0, 'C:\\GitRepositories\\process_drifts_generator\\src')
@@ -51,7 +52,7 @@ def get_labels_between_activities(tree: ProcessTree, activity_one: str, activity
     return label_list
 
 
-def get_position_in_children(children: list[ProcessTree], child: ProcessTree):
+def get_position_in_children(children: List[ProcessTree], child: ProcessTree):
     position = 0
     for x in children:
         if x == child:
@@ -175,11 +176,15 @@ def get_id_from_activity_label(bpmn: BPMN, activity: str):
     return
 
 
-def get_start_events(bpmn: BPMN):
+def get_start_events(bpmn: BPMN, id=False):
+    # return bpmn nodes
     events = []
     for node in bpmn.get_nodes():
         if isinstance(node, BPMN.StartEvent):
-            events.append(node)
+            if id:
+                events.append(node.get_id())
+            else:
+                events.append(node)
     return events
 
 
@@ -207,7 +212,7 @@ def get_bpmn_graph_elements(bpmn: BPMN):
     print("Flows:", bpmn.get_flows())
 
 
-def delete_nodes_and_correct_flows(bpmn: BPMN, nodes: list[BPMN.BPMNNode], start_node_id_predecessor,
+def delete_nodes_and_correct_flows(bpmn: BPMN, nodes: List[BPMN.BPMNNode], start_node_id_predecessor,
                                    end_node_id_successor, removed_flow : list):
     u_flow = start_node_id_predecessor
     #removed_flow = []
@@ -236,7 +241,7 @@ def delete_nodes_and_correct_flows(bpmn: BPMN, nodes: list[BPMN.BPMNNode], start
 
 
 def get_flow(bpmn: BPMN, source, target):
-    print("I will get the flow for source: ", source, "and target: ", target)
+    #print("I will get the flow for source: ", source, "and target: ", target)
     flows_list = bpmn.get_flows()
     for flow in flows_list:
         if (flow.get_source() == source) & (flow.get_target() == target):
@@ -320,7 +325,7 @@ def view_bpmn_with_ids(bpmn_graph: BPMN, format: str = 'png',
         dot.node(node.get_id(), label=label)
 
     for edge in bpmn_graph.get_flows():
-        dot.edge(edge.get_source().get_id(), edge.get_target().get_id())
+        dot.edge(edge.get_source().get_id(), edge.get_target().get_id(), label=edge.get_id())
 
     # Display the modified graph
     dot.view()
@@ -356,3 +361,89 @@ def count_gateways(nodes_list):
         if isinstance(node, BPMN.Gateway):
             count += 1
     return count
+
+def get_target_node_id(bpmn, edge_id):
+    for edge in bpmn.get_flows():
+        if edge.get_id() == edge_id:
+            return edge.get_target()
+    return None  # Return None if the edge ID is not found in the graph
+
+def get_source_node_id(bpmn, edge_id):
+    for edge in bpmn.get_flows():
+        if edge.get_id() == edge_id:
+            return edge.get_source()
+    return None  # Return None if the edge ID is not found in the graph
+
+def appears_before(graph, node_a, node_b):
+    # Initiate result
+    result = False
+    # Check if there's a path between node_a and node_b
+    if not nx.has_path(graph, node_a, node_b):
+        return None
+    
+    # Get all the simple paths between node_a and node_b
+    paths = nx.all_simple_paths(graph, node_a, node_b)
+    
+    # Iterate over each path
+    for path in paths:
+        # Check if node_a appears before node_b in the current path
+        if path.index(node_a) < path.index(node_b):
+            print(f'{node_a.get_id()} before {node_b.get_id()} set result to True')
+            result = True
+        
+    # Get all loops
+    cycles = list(nx.simple_cycles(graph))
+
+    if cycles:
+        # Iterate over each loop
+        for cycle in cycles:
+            # Check if node_a appears before node_b in the current path
+            if cycle.index(node_b) < cycle.index(node_a):
+                result = False
+    
+
+    return result
+
+
+def is_there_path_without_repeated_node(bpmn, node_a, node_b):
+    paths_start_end = []
+    start_events = get_start_events(bpmn)
+    end_events = get_end_events(bpmn)
+    graph = bpmn.get_graph()
+    for start_event in start_events:
+        for end_event in end_events:
+            paths_start_end.append(list(nx.all_simple_paths(graph, start_event, end_event)))
+
+# Function to find all paths from node a to node b and collect edge IDs
+def find_paths_and_edge_ids(graph, start, end, path=[], edge_ids=[]):
+    path = path + [start]
+    if start == end:
+        return [path], edge_ids
+    if not graph.has_node(start):
+        return [], []
+    paths = []
+    for neighbor in graph.neighbors(start):
+        edge_id = graph[start][neighbor][0]['id']
+        new_edge_ids = edge_ids + [edge_id]
+        new_paths, edge_ids = find_paths_and_edge_ids(graph, neighbor, end, path, new_edge_ids)
+        paths.extend(new_paths)
+    return {'paths' : paths, 'edges' : edge_ids}
+
+def get_edges_from_start_to_node_simple(bpmn, node_id):
+    """
+    returns a list with all the edges from the start event to node, considering only simple paths.
+    """
+    graph = bpmn.get_graph()
+    node = node_id
+    start_events = get_start_events(bpmn, id=True)
+    edges_set = set()
+    for start_event in start_events:
+        simple_paths = nx.all_simple_paths(G=graph, source=start_event, target=node)
+        for path in simple_paths:
+            for i in range(len(path) - 1):
+                edges_set.add(get_flow(bpmn, path[i], path[i+1]).get_id())  # Get flow between to nodes
+    return list(edges_set)
+    
+        
+
+

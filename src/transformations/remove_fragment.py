@@ -39,9 +39,13 @@ class RemoveFragment(BpmnTransformation):
         end_node_id = get_id_from_activity_label(self.bpmn_process, self.fragment_end) if self.activity_key == ActivityKey.NAME else self.fragment_end
         print("delete to end node", end_node_id)
         end_node_id_successors = next(graph.successors(end_node_id))
-        nodes_to_remove = list(
-            element for path in nx.all_simple_paths(graph, source=start_node_id, target=end_node_id) for element in
-            path)
+        if self.fragment_start == self.fragment_end:
+            nodes_to_remove = [self.fragment_start]
+        else:
+            nodes_to_remove = list(
+                element for path in nx.all_simple_paths(graph, source=start_node_id, target=end_node_id) for element in
+                path)
+        print("nodes to remove:", nodes_to_remove)
         if (self.activity_key==ActivityKey.NAME):
             before_pred_seq_flow = get_flow(self.bpmn_process, start_node_predecessor, get_node_from_id(self.bpmn_process,
                                                                                                         get_id_from_activity_label(

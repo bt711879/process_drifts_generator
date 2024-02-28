@@ -39,10 +39,10 @@ class SwapFragments(BpmnTransformation):
         remove_fragment_two_transformator.check()
         extracted_fragment_two = FragmentFactory.create_fragment(remove_fragment_two_transformator.apply())
         # add the extracted_fragment_one after the fragment_two_start_predecessor
-        add_fragment_one_transformator = AddFragment(self.bpmn_process, fragment_two_start_predecessor.get_id(), extracted_fragment_one, Move.SerialMove, activity_key=ActivityKey.ID)
+        add_fragment_one_transformator = AddFragment(bpmn_process=self.bpmn_process, activity_before=fragment_two_start_predecessor.get_id(), fragment=extracted_fragment_one, move=Move.SerialMove, activity_key=ActivityKey.ID)
         add_fragment_one_transformator.check()
         add_fragment_one_transformator.apply()
         # add the extracted_fragment_two after the fragment_one_start_predecessor
-        add_fragment_two_transformator = AddFragment(self.bpmn_process, fragment_one_start_predecessor.get_id(), extracted_fragment_two, Move.SerialMove, activity_key=ActivityKey.ID)
+        add_fragment_two_transformator = AddFragment(bpmn_process=self.bpmn_process, activity_before=fragment_one_start_predecessor.get_id(), fragment=extracted_fragment_two, move=Move.SerialMove, activity_key=ActivityKey.ID)
         add_fragment_two_transformator.check()
         add_fragment_two_transformator.apply()
